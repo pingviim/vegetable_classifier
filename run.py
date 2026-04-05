@@ -5,15 +5,17 @@ import os
 import argparse
 from pathlib import Path
 
+
 def run_command(cmd, description):
-    print(f"\n{'-'*50}")
+    print(f"\n{'-' * 50}")
     print(f"> {description}")
-    print(f"{'-'*50}\n")
+    print(f"{'-' * 50}\n")
     result = subprocess.run(cmd, shell=True)
     if result.returncode != 0:
         print(f"Command failed with code {result.returncode}")
         sys.exit(result.returncode)
     return result
+
 
 def main():
     parser = argparse.ArgumentParser(description='Vegetable Classifier Manager')
@@ -23,7 +25,13 @@ def main():
         'docker-up', 'docker-down', 'clean'
     ], help='Command to execute')
 
+    parser.add_argument('--model-type', type=str, choices=['resnet50', 'custom'],
+                        default=None, help='Model type to use (overrides config.py)')
+
     args = parser.parse_args()
+
+    if args.model_type:
+        os.environ['MODEL_TYPE'] = args.model_type
 
     if args.command == 'install':
         run_command('pip install -r requirements/base.txt', 'Installing base dependencies')
@@ -32,22 +40,32 @@ def main():
         run_command('pip install -r requirements/dev.txt', 'Installing all dependencies')
 
     elif args.command == 'train-resnet50':
-        run_command('python training/scripts/train.py --model_type resnet50', 'Training ResNet50 model')
+        run_command('python training/scripts/train.py --model_type resnet50',
+                    'Training ResNet50 model')
 
     elif args.command == 'train-custom':
-        run_command('python training/scripts/train.py --model_type custom', 'Training custom CNN model')
+        run_command('python training/scripts/train.py --model_type custom',
+                    'Training custom CNN model')
 
     elif args.command == 'convert-onnx':
-        run_command('python training/scripts/convert_to_onnx.py --model_type resnet50 --force', 'Converting model to ONNX')
+        model_type = args.model_type if args.model_type else 'resnet50'
+        run_command(f'python training/scripts/convert_to_onnx.py --model_type {model_type} --force',
+                    f'Converting {model_type} model to ONNX')
 
     elif args.command == 'convert-all':
-        run_command('python training/scripts/convert_to_onnx.py --all --force', 'Converting all models to ONNX')
+        run_command('python training/scripts/convert_to_onnx.py --all --force',
+                    'Converting all models to ONNX')
 
     elif args.command == 'serve-api':
-        run_command('uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000', 'Starting API server')
+        model_type = args.model_type if args.model_type else 'resnet50'
+        os.environ['MODEL_TYPE'] = model_type
+        print(f"Starting API with MODEL_TYPE={model_type}")
+        run_command('uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8000',
+                    f'Starting API server with {model_type} model')
 
     elif args.command == 'serve-frontend':
-        run_command('uvicorn app.frontend.app:app --reload --host 0.0.0.0 --port 8080', 'Starting frontend server')
+        run_command('uvicorn app.frontend.app:app --reload --host 0.0.0.0 --port 8080',
+                    'Starting frontend server')
 
     elif args.command == 'test':
         run_command('pytest tests/ -v', 'Running tests')
@@ -73,6 +91,7 @@ def main():
                     else:
                         path.unlink()
         print("Clean complete")
+
 
 if __name__ == '__main__':
     main()

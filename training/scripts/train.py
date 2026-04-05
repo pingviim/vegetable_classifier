@@ -1,5 +1,7 @@
 import sys
 import os
+import argparse
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import numpy as np
@@ -12,6 +14,7 @@ from training.utils.model_utils import create_model
 from training.utils.train_utils import train_model, validate, save_metrics
 from training.utils.visualize import plot_training_history, plot_confusion_matrix, show_predictions
 
+
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -21,9 +24,23 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+
 def main():
-    run_name = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_dir = os.path.join(BASE_SAVE_DIR, MODEL_TYPE)
+    parser = argparse.ArgumentParser(description='Train vegetable classifier model')
+    parser.add_argument('--model_type', type=str, choices=['resnet50', 'custom'],
+                        default=None, help='Model type to train (overrides config.py)')
+    args = parser.parse_args()
+
+    # Определяем тип модели
+    if args.model_type:
+        model_type = args.model_type
+        print(f"Using model_type from command line: {model_type}")
+    else:
+        model_type = MODEL_TYPE
+        print(f"Using model_type from config.py: {model_type}")
+
+    # Создаем папку для модели
+    save_dir = os.path.join(BASE_SAVE_DIR, model_type)
     checkpoint_path = os.path.join(save_dir, "best_model.pth")
     metrics_path = os.path.join(save_dir, "metrics.txt")
 
@@ -32,9 +49,8 @@ def main():
     print("=" * 50)
     print("VEGETABLE CLASSIFICATION TRAINING")
     print("=" * 50)
-    print(f"Run name: {run_name}")
     print(f"Save directory: {save_dir}")
-    print(f"Model type: {MODEL_TYPE}")
+    print(f"Model type: {model_type}")
 
     set_seed(SEED)
     print(f"Device: {DEVICE}")
@@ -51,7 +67,7 @@ def main():
         f.write('\n'.join(class_names))
 
     config_info = {
-        'model_type': MODEL_TYPE,
+        'model_type': model_type,
         'epochs': EPOCHS,
         'batch_size': BATCH_SIZE,
         'learning_rate': LEARNING_RATE,
@@ -70,7 +86,7 @@ def main():
             f.write(f"{key}: {value}\n")
 
     print("\nCreating model...")
-    model = create_model(model_type=MODEL_TYPE)
+    model = create_model(model_type=model_type)
 
     print("\nTraining...")
     history, best_val_acc = train_model(
@@ -80,7 +96,7 @@ def main():
     )
 
     print("\nTesting...")
-    model = create_model(model_type=MODEL_TYPE)
+    model = create_model(model_type=model_type)
     checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
     model.load_state_dict(checkpoint)
     model = model.to(DEVICE)
@@ -90,7 +106,7 @@ def main():
     print(f"Test Loss: {test_loss:.4f}")
 
     print("\nSaving metrics...")
-    save_metrics(history, best_val_acc, test_acc, MODEL_TYPE, config_info, metrics_path)
+    save_metrics(history, best_val_acc, test_acc, model_type, config_info, metrics_path)
 
     print("\nGenerating visualizations...")
     plot_training_history(history, save_dir=save_dir)
@@ -101,6 +117,7 @@ def main():
     print("TRAINING COMPLETE")
     print("=" * 50)
     print(f"All results saved to: {save_dir}")
+
 
 if __name__ == "__main__":
     main()
