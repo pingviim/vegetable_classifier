@@ -37,10 +37,16 @@ def load_model_and_classes():
     """Загрузка модели и классов"""
     global model, class_names
 
-    models_path = "./models"
-    model_path = os.path.join(models_path, "best_model.pth")
-    class_names_path = os.path.join(models_path, "class_names.txt")
-    config_path = os.path.join(models_path, "config.txt")
+    base_models_path = "./models"
+    model_folder_path = os.path.join(base_models_path, MODEL_TYPE)
+
+    if not os.path.exists(model_folder_path):
+        logger.warning(f"Model folder not found: {model_folder_path}, trying root models folder")
+        model_folder_path = base_models_path
+
+    model_path = os.path.join(model_folder_path, "best_model.pth")
+    class_names_path = os.path.join(model_folder_path, "class_names.txt")
+    config_path = os.path.join(model_folder_path, "config.txt")
 
     if not os.path.exists(class_names_path):
         logger.error(f"Class names file not found: {class_names_path}")
