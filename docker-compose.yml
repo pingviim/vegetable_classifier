@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: vegetable-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./training/models:/app/training/models:ro
+    environment:
+      - MODEL_TYPE=resnet50
+      - USE_ONNX=true
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: vegetable-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+    restart: unless-stopped
