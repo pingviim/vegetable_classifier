@@ -3,17 +3,20 @@ FROM python:3.9-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements/api.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY requirements/ /tmp/requirements/
+
+RUN pip install --no-cache-dir -r /tmp/requirements/api.txt
 
 COPY app/ /app/app/
 COPY config.py /app/
 COPY training/utils/ /app/training/utils/
+
+RUN mkdir -p /app/training/models/resnet50/
 
 COPY training/models/resnet50/best_model.onnx /app/training/models/resnet50/
 COPY training/models/resnet50/class_names.txt /app/training/models/resnet50/
